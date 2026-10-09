@@ -1,0 +1,18 @@
+'use strict';
+let shownQuestionKey=null;const studioAudio=new StudioAudio();let celebrationBusy=false,stageBusy=false,phoneSession=null,phoneReturnFocus=null;const reducedMedia=matchMedia('(prefers-reduced-motion: reduce)');let reducedOverride=false;
+try{reducedOverride=localStorage.getItem('quiz-million-motion')==='reduced';const settings=JSON.parse(localStorage.getItem('quiz-million-audio')||'{}');if(typeof settings.volume==='number')studioAudio.setVolume(settings.volume);studioAudio.setMuted(!!settings.muted);}catch{}
+const motionReduced=()=>reducedOverride||reducedMedia.matches;
+const phoneDialog=document.querySelector('#phone-dialog'),chat=document.querySelector('#chat-history'),phoneInput=document.querySelector('#phone-input'),phoneStatus=document.querySelector('#phone-status');
+const speechSupported=()=>!!(window.SpeechRecognition||window.webkitSpeechRecognition)&&window.isSecureContext;
+function saveAudio(){try{localStorage.setItem('quiz-million-audio',JSON.stringify({volume:studioAudio.volume,muted:studioAudio.muted}));}catch{}}
+function updateSettings(){document.body.classList.toggle('reduce-motion',motionReduced());document.querySelector('#motion').checked=motionReduced();document.querySelector('#motion').disabled=reducedMedia.matches;document.querySelector('#volume').value=Math.round(studioAudio.volume*100);document.querySelector('#mute').textContent=studioAudio.muted?'音声：ミュート':'音声：オン';document.querySelector('#mute').setAttribute('aria-pressed',String(studioAudio.muted));}
+updateSettings();reducedMedia.addEventListener?.('change',updateSettings);
+document.querySelector('#motion').addEventListener('change',e=>{reducedOverride=e.target.checked;try{localStorage.setItem('quiz-million-motion',reducedOverride?'reduced':'full');}catch{}updateSettings();});
+document.querySelector('#volume').addEventListener('input',e=>{studioAudio.setVolume(e.target.value/100);saveAudio();refreshPhoneVoice();});
+document.querySelector('#mute').addEventListener('click',()=>{studioAudio.setMuted(!studioAudio.muted);saveAudio();updateSettings();refreshPhoneVoice();});
+function safeAudio(action){try{return action();}catch{studioAudio.enabled=false;document.querySelector('#audio-status').textContent='音声エラー · 無音でプレイ可能';return false;}}
+async function activateAudio(){const ok=await studioAudio.unlock();document.querySelector('#audio-status').textContent=ok?'オリジナル音源':'音声を利用できません · 無音でプレイ可能';}
+document.querySelector('#audio-enable').addEventListener('click',activateAudio);
+document.addEventListener('quiz:sound',e=>{const event=e.detail.event;safeAudio(()=>event==='correct'?studioAudio.success(game.correct):studioAudio.effect(event));const reaction=event==='start'?'start':event==='wrong'?'wrong':event==='clear'?'clear':event==='correct'?(game.correct===15?'clear':game.correct>=10?'high':'correct'):null;if(reaction){safeAudio(()=>studioAudio.crowd(reaction));window.StudioSet?.react(reaction==='clear'?'celebration':reaction);}});
+function syncExperience(){const questionKey=game.phase==='idle'?null:game.question?.id;document.body.classList.toggle('new-question',game.phase==='question'&&questionKey!==shownQuestionKey);shownQuestionKey=questionKey;document.body.dataset.scene=stageBusy?'voting':game.phase;document.body.dataset.round=game.phase==='idle'?'title':game.index===14?'final':game.index>=10?'late':game.index>=5?'middle':'early';document.body.dataset.audioScene=StudioAudio.sceneFor(game.phase,game.index,stageBusy||document.hidden);safeAudio(()=>studioAudio.sceneTo(document.body.dataset.audioScene));safeAudio(()=>studioAudio.setPhoneDucking(!!phoneSession));}
+document.addEventListener('visibilitychange',()=>{if(document.hidden){stopRecognition();safeAudio(()=>studioAudio.pause());}else{syncExperience();}});

@@ -1,0 +1,39 @@
+/* Ver.4 set lighting. Geometry stays static; only opacity and transform animate. */
+:root{--muted:#b2bed7}
+body{--seat-light:#8578d6;--ring-light:#86b8ff}
+.studio-vignette{background:linear-gradient(180deg,#02071805,#050a1800 40%,#03091945)}
+.auditorium{opacity:.88}.seat-led{opacity:.9}.beams{opacity:.9}.led-wall{opacity:1}
+.led-orbits{transform-origin:800px 245px;animation:led-orbit 28s linear infinite}
+.ring-chase{animation:ring-track 16s linear infinite}.floor-reflection{mix-blend-mode:screen}
+body[data-scene=question] .auditorium{opacity:.74}body[data-scene=idle] .auditorium{opacity:1}
+body[data-scene=locked] .roof-rings,body[data-scene=locked] .portal-ribs{opacity:.2}
+body[data-scene=locked] .focus-beams{opacity:1}body[data-scene=locked] .ring-chase{animation-play-state:paused}
+body[data-celebration] .focus-beams{opacity:1}body[data-celebration] .beams{opacity:1}
+body[data-celebration]:not([data-celebration=wrong]) .auditorium{opacity:1;filter:brightness(1.65)}
+body[data-celebration]:not([data-celebration=wrong]) .led-wall{opacity:1;filter:brightness(1.5)}
+body[data-celebration]:not([data-celebration=wrong]) .stage-rim{stroke:#fff0af;stroke-width:9}
+body[data-celebration]:not([data-celebration=wrong]) .outer-rings{stroke:#64f3b3;opacity:1}
+body[data-celebration]:not([data-celebration=wrong]) .ladder li.active{animation:award-glow 1.2s ease-out 2;outline:2px solid #fff0b5}
+body[data-celebration=guarantee] .explanation:before{content:'◆ GUARANTEED · 賞金保証ライン突破';display:block;color:#ffe2a0;letter-spacing:2px;margin-bottom:12px;font-weight:700}
+body[data-celebration=final]{--led-color:#ffe8a5;--beam-color:#ffe8a5;--ring-light:#fff2be}
+body[data-celebration=late] .stage-rim,body[data-celebration=final] .stage-rim{stroke-width:12}
+body[data-celebration=final] .roof-rings{stroke:#ffdf92;filter:brightness(1.7)}
+#particles i:nth-child(odd){background:#ffda84}body[data-scene=cleared] #particles i{animation-iteration-count:1}
+body[data-scene=revealed] #studio{animation:award-reveal 1.6s ease-out}
+body:not([data-celebration]) #particles i{display:none}.champion{animation-iteration-count:2}
+.question-card,.answer,.ladder{box-shadow:0 12px 40px #0006}
+.question-card{border-top:2px solid #9dadde}.answer.correct{border-color:#a3ffc9;background:linear-gradient(120deg,#154e42,#12322e);color:#fff}
+.answer.wrong{border-color:#ffa4ac;color:#fff}.answer.selected{color:#fff3ce}
+button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #ffdc8f;outline-offset:4px}
+.question-card h1:focus{outline:none}.next:disabled{opacity:.75}.ladder li{color:#aab8d4}
+footer{color:#b0bdd5}.settings #audio-status{color:#b6c2da}
+@keyframes led-orbit{to{transform:rotate(360deg)}}
+@keyframes ring-track{to{stroke-dashoffset:-1000}}
+@keyframes award-reveal{0%{opacity:.2}28%{opacity:1}100%{opacity:1}}
+@keyframes award-glow{0%{box-shadow:0 0 5px #ffc95d}30%{box-shadow:0 0 42px #ffdc87b3}100%{box-shadow:0 0 12px #d6ad4c60}}
+@media(min-width:1000px){main{padding-top:160px}.game-layout{grid-template-columns:minmax(0,1fr) 265px;max-width:1200px;margin:auto}.welcome{margin-top:40px}.question-card{padding:22px 26px}.question-card h1{min-height:50px}.answer{min-height:72px}.ladder{border-color:#756d54}}
+@media(min-width:1500px){main{padding-top:190px}.game-layout{max-width:1300px;grid-template-columns:minmax(0,1fr) 275px}}
+@media(max-width:760px){#studio svg{width:190%;margin-left:-45%}.auditorium{opacity:.8}.led-wall{opacity:.85}.led-wall text{opacity:.7}main{padding-top:92px}.settings{font-size:11px}.answer{overflow-wrap:anywhere}.game-meta .text-button{min-height:44px}.mode small{line-height:1.7;display:block}.mode-grid{min-width:0}.mode{min-width:0}.question-card{padding:20px}.question-card h1{font-size:18px;line-height:1.8}#phone-dialog{max-height:calc(100dvh - 24px)}body[data-celebration] .auditorium{filter:none}}
+@media(max-width:360px){.progress{gap:8px;flex-wrap:wrap}.lifelines button{padding:12px 4px}.game-meta{gap:4px}.tag{font-size:9px}}
+@media(prefers-reduced-motion:reduce){#studio *,#particles *,*::after{animation:none!important;transition:none!important}#particles{display:none}}
+.reduce-motion #studio *, .reduce-motion #particles *{animation:none!important;transition:none!important}

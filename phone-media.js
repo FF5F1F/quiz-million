@@ -1,0 +1,26 @@
+/* Browser speech adapters, separated from the rules and clock for testing.
+   Recognition starts only from explicit UI action. No getUserMedia dependency. */
+(function(root){'use strict';
+class PhoneSpeech {
+ constructor(profile,{env=root,onVoices=()=>{},onStart=()=>{},onFinish=()=>{}}={}){this.profile=profile;this.env=env;this.onVoices=onVoices;this.onStart=onStart;this.onFinish=onFinish;this.disposed=false;this.current=null;this.timer=null;this.token=0;this.voices=[];this.refresh=()=>{try{this.voices=(env.speechSynthesis?.getVoices()||[]).filter(v=>/^ja(?:-|$)/i.test(v.lang));}catch{this.voices=[];}if(!this.disposed)this.onVoices(this.voices);};env.speechSynthesis?.addEventListener?.('voiceschanged',this.refresh);this.refresh();}
+ get supported(){return !!(this.env.speechSynthesis&&this.env.SpeechSynthesisUtterance);}
+ chooseVoice(uri){if(uri)return this.voices.find(v=>v.voiceURI===uri)||null;const male=/otoya|ichiro|takumi|keita|一郎|おとや/i,female=/kyoko|haruka|nanami|ayumi|mizuki|shiori|sayaka|sakura|きょうこ|はるか/i;return this.voices.find(v=>(this.profile.gender==='male'?male:female).test(v.name))||this.voices.find(v=>v.localService)||this.voices[0]||null;}
+ speak(text,{volume=1,muted=false,voiceURI='',remaining=30,rate=1.3}={}){this.cancel();if(this.disposed||!this.supported||!this.voices.length||muted||volume<=0)return false;try{const u=new this.env.SpeechSynthesisUtterance(text);u.lang='ja-JP';const voice=this.chooseVoice(voiceURI);if(voice)u.voice=voice;u.rate=[1,1.3,1.6].includes(Number(rate))?Number(rate):1.3;u.pitch=this.profile.pitch;u.volume=Math.max(0,Math.min(1,volume));const token=this.token;this.current=u;this.onStart();const finish=()=>{if(this.disposed||token!==this.token)return;this.env.clearTimeout(this.timer);this.timer=null;this.current=null;this.onFinish();};u.onend=finish;u.onerror=finish;this.env.speechSynthesis.speak(u);
+ // Engines occasionally omit onend (e.g. autoplay blocked). Never block text/mic.
+ this.timer=this.env.setTimeout(()=>{if(token!==this.token)return;this.env.speechSynthesis.cancel();finish();},Math.min(8000,Math.max(250,remaining*1000)));return true;}catch{this.current=null;this.onFinish();return false;}}
+ cancel(){this.token++;this.env.clearTimeout(this.timer);this.timer=null;if(this.current){this.current.onend=null;this.current.onerror=null;this.current=null;try{this.env.speechSynthesis?.cancel();}catch{}}}
+ dispose(){if(this.disposed)return;this.cancel();this.disposed=true;this.env.speechSynthesis?.removeEventListener?.('voiceschanged',this.refresh);}
+}
+class PhoneRecognition {
+ constructor({env=root,isActive=()=>false,onText=()=>{},onStatus=()=>{}}={}){this.env=env;this.isActive=isActive;this.onText=onText;this.onStatus=onStatus;this.instance=null;this.wanted=false;this.paused=false;this.retries=0;this.timer=null;this.disposed=false;}
+ get supported(){return !!(this.env.SpeechRecognition||this.env.webkitSpeechRecognition)&&!!this.env.isSecureContext;}
+ start(){if(this.disposed||!this.supported||!this.isActive()){this.onStatus('unavailable');return false;}this.wanted=true;this.paused=false;this.retries=0;return this.begin();}
+ begin(){if(!this.wanted||this.paused||this.disposed||!this.isActive())return false;this.detach();try{const C=this.env.SpeechRecognition||this.env.webkitSpeechRecognition,r=new C();this.instance=r;r.lang='ja-JP';r.continuous=true;r.interimResults=true;const delivered=new Set();r.onstart=()=>{if(this.instance===r&&this.isActive())this.onStatus('listening');};r.onresult=e=>{if(this.instance!==r||!this.isActive())return;for(let i=e.resultIndex||0;i<e.results.length;i++){const result=e.results[i],text=result[0]?.transcript||'';if(!result.isFinal){this.onStatus('interim',text);continue;}const key=i+':'+text;if(!delivered.has(key)){delivered.add(key);this.onText(text);if(this.instance!==r||!this.isActive())break;}}};r.onnomatch=()=>{if(this.instance===r)this.onStatus('nomatch');};r.onerror=e=>{if(this.instance!==r)return;const denied=['not-allowed','service-not-allowed','audio-capture'].includes(e.error);if(denied){this.wanted=false;this.detach();this.onStatus('denied');}else this.onStatus('error',e.error);};r.onend=()=>{if(this.instance!==r)return;this.detach();if(this.wanted&&!this.paused&&this.isActive()&&this.retries<3){this.retries++;this.onStatus('reconnecting');this.timer=this.env.setTimeout(()=>{this.timer=null;this.begin();},350);}else{this.wanted=false;this.onStatus('stopped');}};this.onStatus('starting');r.start();return true;}catch{this.wanted=false;this.detach();this.onStatus('error','start');return false;}}
+ detach(){const r=this.instance;this.instance=null;if(r){r.onresult=r.onerror=r.onend=r.onstart=r.onnomatch=null;try{r.abort();}catch{}}}
+ pause(){if(!this.wanted)return;this.paused=true;this.env.clearTimeout(this.timer);this.timer=null;this.detach();this.onStatus('paused');}
+ resume(){if(!this.wanted||this.disposed)return;this.paused=false;this.begin();}
+ stop(){this.wanted=false;this.paused=false;this.env.clearTimeout(this.timer);this.timer=null;this.detach();this.onStatus('stopped');}
+ dispose(){if(this.disposed)return;this.stop();this.disposed=true;}
+}
+const api={PhoneSpeech,PhoneRecognition};root.QuizPhoneMedia=api;if(typeof module!=='undefined')module.exports=api;
+})(typeof window!=='undefined'?window:globalThis);
